@@ -1,0 +1,64 @@
+name: Tentar criar instância OCI (capacidade)
+
+# Roda a cada 15 minutos, sozinho, sem depender de nenhum computador ligado.
+# "workflow_dispatch" deixa rodar manualmente também, pelo botão "Run workflow"
+# na aba Actions — use isso para testar antes de confiar no agendamento.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+# Precisa de permissão de escrita para poder criar a Issue de aviso no passo final.
+permissions:
+  issues: write
+
+jobs:
+  tentar-criar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Instalar dependências
+        run: composer install --no-dev --no-interaction
+
+      - name: Gravar a chave privada da API (vem de um Secret, nunca fica no repositório)
+        run: |
+          echo "${{ secrets.OCI_PRIVATE_KEY }}" > oci_key.pem
+          chmod 600 oci_key.pem
+
+      - name: Gravar o .env com os dados da conta
+        run: |
+          cat <<EOF > .env
+          OCI_REGION=${{ secrets.OCI_REGION }}
+          OCI_USER_ID=${{ secrets.OCI_USER_ID }}
+          OCI_TENANCY_ID=${{ secrets.OCI_TENANCY_ID }}
+          OCI_KEY_FINGERPRINT=${{ secrets.OCI_KEY_FINGERPRINT }}
+          OCI_PRIVATE_KEY_FILENAME=${{ github.workspace }}/oci_key.pem
+          OCI_SUBNET_ID=${{ secrets.OCI_SUBNET_ID }}
+          OCI_IMAGE_ID=${{ secrets.OCI_IMAGE_ID }}
+          OCI_SSH_PUBLIC_KEY=${{ secrets.OCI_SSH_PUBLIC_KEY }}
+          OCI_OCPUS=2
+          OCI_MEMORY_IN_GBS=12
+          OCI_MAX_INSTANCES=1
+          EOF
+
+      - name: Tentar criar a instância
+        run: php index.php
+
+      # Só roda se o passo acima deu certo de verdade (instância criada).
+      # Cria uma Issue no seu repositório — o GitHub te avisa por e-mail (e
+      # push, se tiver o app instalado) sem você precisar checar nada.
+      - name: Avisar que funcionou
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "✅ Instância OCI criada" \
+            --body "A instância foi criada com sucesso em $(date -u '+%d/%m/%Y %H:%M UTC'). Acesse o console da Oracle Cloud para reservar o IP público e seguir o checklist."
