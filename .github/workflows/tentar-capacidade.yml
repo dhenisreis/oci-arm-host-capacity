@@ -33,16 +33,19 @@ jobs:
           chmod 600 oci_key.pem
 
       - name: Gravar o .env com os dados da conta
+        # Valores entre aspas: a chave SSH pública tem espaços dentro dela
+        # (tipo + bloco + comentário) e o parser do dotenv rejeita valor com
+        # espaço sem aspas — foi exatamente isso que quebrou na primeira versão.
         run: |
           cat <<EOF > .env
-          OCI_REGION=${{ secrets.OCI_REGION }}
-          OCI_USER_ID=${{ secrets.OCI_USER_ID }}
-          OCI_TENANCY_ID=${{ secrets.OCI_TENANCY_ID }}
-          OCI_KEY_FINGERPRINT=${{ secrets.OCI_KEY_FINGERPRINT }}
-          OCI_PRIVATE_KEY_FILENAME=${{ github.workspace }}/oci_key.pem
-          OCI_SUBNET_ID=${{ secrets.OCI_SUBNET_ID }}
-          OCI_IMAGE_ID=${{ secrets.OCI_IMAGE_ID }}
-          OCI_SSH_PUBLIC_KEY=${{ secrets.OCI_SSH_PUBLIC_KEY }}
+          OCI_REGION="${{ secrets.OCI_REGION }}"
+          OCI_USER_ID="${{ secrets.OCI_USER_ID }}"
+          OCI_TENANCY_ID="${{ secrets.OCI_TENANCY_ID }}"
+          OCI_KEY_FINGERPRINT="${{ secrets.OCI_KEY_FINGERPRINT }}"
+          OCI_PRIVATE_KEY_FILENAME="${{ github.workspace }}/oci_key.pem"
+          OCI_SUBNET_ID="${{ secrets.OCI_SUBNET_ID }}"
+          OCI_IMAGE_ID="${{ secrets.OCI_IMAGE_ID }}"
+          OCI_SSH_PUBLIC_KEY="${{ secrets.OCI_SSH_PUBLIC_KEY }}"
           OCI_OCPUS=2
           OCI_MEMORY_IN_GBS=12
           OCI_MAX_INSTANCES=1
